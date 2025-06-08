@@ -2,33 +2,43 @@
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 REGION="us-east-1"
-ROLE_NAME="lambda-api-role"
-FUNCTION_NAME="HelloApiFunction"
+
+# Lambda Functions
+FUNCTIONS=("HelloApiFunction" "HelloWorldFunction")
+
+# IAM Roles
+ROLES=("lambda-api-role" "lambda-basic-role")
+
+# Delete Lambda functions
+for FUNCTION_NAME in "${FUNCTIONS[@]}"; do
+  echo "Deleting Lambda function: $FUNCTION_NAME"
+  aws lambda delete-function --function-name "$FUNCTION_NAME"
+done
+
+# Delete IAM roles and attached policy
+for ROLE_NAME in "${ROLES[@]}"; do
+  echo "Detaching policies and deleting IAM role: $ROLE_NAME"
+  aws iam detach-role-policy \
+    --role-name "$ROLE_NAME" \
+    --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null
+
+  aws iam delete-role --role-name "$ROLE_NAME"
+done
+
+# Delete API Gateway
 API_NAME="HelloApiGateway"
-
-# 1. Delete Lambda function
-aws lambda delete-function --function-name $FUNCTION_NAME
-
-# 2. Detach and delete IAM role and policy
-aws iam delete-role-policy \
-  --role-name $ROLE_NAME \
-  --policy-name lambda-logs
-
-aws iam delete-role --role-name $ROLE_NAME
-
-# 3. Find API Gateway ID by name
 REST_API_ID=$(aws apigateway get-rest-apis \
   --query "items[?name=='$API_NAME'].id" \
   --output text)
 
-# 4. Delete API Gateway if it exists
 if [ -n "$REST_API_ID" ]; then
-  aws apigateway delete-rest-api --rest-api-id $REST_API_ID
+  echo "Deleting API Gateway: $API_NAME"
+  aws apigateway delete-rest-api --rest-api-id "$REST_API_ID"
 else
   echo "API Gateway '$API_NAME' not found or already deleted."
 fi
 
-# 5. Delete zip if exists
+# Delete Lambda zip file
 rm -f function.zip
 
-echo "✅ All resources cleaned up."
+echo "✅ All Lambda-related resources have been deleted."
