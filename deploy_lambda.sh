@@ -1,4 +1,4 @@
-'#!/bin/bash
+#!/bin/bash
 
 # Create IAM Role
 aws iam create-role \
@@ -11,13 +11,13 @@ aws iam put-role-policy \
   --policy-name lambda-basic-logs \
   --policy-document file://role-policy.json
 
-# Wait for IAM role to propagate
+# Wait a few seconds for IAM role to be ready
 sleep 10
 
-# Zip the function code
+# Zip the Lambda function code
 zip function.zip lambda_function.py
 
-# Create Lambda Function
+# Create the Lambda function
 aws lambda create-function \
   --function-name HelloWorldFunction \
   --runtime python3.12 \
